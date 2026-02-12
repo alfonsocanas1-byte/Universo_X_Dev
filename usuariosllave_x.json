@@ -1,0 +1,14 @@
+{
+    "3001234567": {
+        "llave": "1111",
+        "fecha_registro": "2026-02-12 10:00:00",
+        "rol": "admin",
+        "estado": "activo"
+    },
+    "3109876543": {
+        "llave": "8888",
+        "fecha_registro": "2026-02-12 10:05:00",
+        "rol": "conductor",
+        "estado": "activo"
+    }
+}

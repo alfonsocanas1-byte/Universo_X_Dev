@@ -1,0 +1,17 @@
+[
+    {
+        "Modulo": "Logística",
+        "Archivo_PY": "logistica_x.py",
+        "Estado": "Activo"
+    },
+    {
+        "Modulo": "Alacena",
+        "Archivo_PY": "alacena_x.py",
+        "Estado": "Activo"
+    },
+    {
+        "Modulo": "Restaurante",
+        "Archivo_PY": "restaurante_x.py",
+        "Estado": "Activo"
+    }
+]

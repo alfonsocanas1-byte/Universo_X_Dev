@@ -1,0 +1,14 @@
+{
+    "ABC123": {
+        "llave": "1234",
+        "responsable": "Alfonso",
+        "tipo": "maquina",
+        "fecha": "2026-02-12"
+    },
+    "XYZ789": {
+        "llave": "5678",
+        "responsable": "Sebastián",
+        "tipo": "maquina",
+        "fecha": "2026-02-12"
+    }
+}

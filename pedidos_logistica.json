@@ -1,0 +1,13 @@
+[
+    {
+        "ID": 1,
+        "Usuario": "Sistema",
+        "Item": "Registro inicial del Universo Logístico",
+        "Costo Unitario": 0,
+        "Costo Total": 0,
+        "Costo Servicio": 0,
+        "Comentarios": "Bienvenido al sistema de logística.",
+        "Estado": "Completado",
+        "Fecha": "2026-02-11 12:00"
+    }
+]
