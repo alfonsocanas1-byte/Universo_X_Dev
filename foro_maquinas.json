@@ -1,0 +1,25 @@
+{
+    "TEMA-2602121100": {
+        "titulo": "Sugerencias Aceite Nissan Frontier",
+        "descripcion": "¿Qué marca de aceite están usando para el cambio de los 10.000km?",
+        "fecha": "2026-02-12 11:00",
+        "respuestas": [
+            {
+                "placa": "ABC123",
+                "mensaje": "Yo uso Mobil Delvac y me ha salido muy bueno.",
+                "fecha": "2026-02-12 11:15"
+            },
+            {
+                "placa": "XYZ789",
+                "mensaje": "Prefiero el original de la Nissan, me da más confianza.",
+                "fecha": "2026-02-12 11:30"
+            }
+        ]
+    },
+    "TEMA-2602121200": {
+        "titulo": "Estado de la vía a Montebello",
+        "descripcion": "¿Alguien sabe cómo está la carretera hoy por la lluvia?",
+        "fecha": "2026-02-12 12:00",
+        "respuestas": []
+    }
+}
