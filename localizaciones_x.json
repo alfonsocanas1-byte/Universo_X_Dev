@@ -1,1 +1,0 @@
-LOC_FILE = os.path.join(FOLDER_PATH, "localizaciones_x.json")
