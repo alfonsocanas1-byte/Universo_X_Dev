@@ -1,113 +1,133 @@
 import streamlit as st
+import json
 import os
 import importlib.util
-import pandas as pd
+from datetime import date
 
 # --- CONFIGURACIÓN DEL UNIVERSO ---
-st.set_page_config(page_title="Universo X - Lobby", layout="wide")
+st.set_page_config(page_title="Universo X - Sistema Central", layout="wide")
+
+# Archivo de Base de Datos
+ARCHIVO_USUARIOS = "usuarios_x.json"
+
+# --- FUNCIONES DE PERSISTENCIA ---
+def cargar_usuarios():
+    if os.path.exists(ARCHIVO_USUARIOS):
+        with open(ARCHIVO_USUARIOS, 'r', encoding='utf-8') as f:
+            try: return json.load(f)
+            except: return {}
+    return {}
+
+def guardar_usuarios(usuarios):
+    with open(ARCHIVO_USUARIOS, 'w', encoding='utf-8') as f:
+        json.dump(usuarios, f, indent=4, ensure_ascii=False)
 
 # --- ESTADO DE SESIÓN ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'modulo_activo' not in st.session_state:
     st.session_state.modulo_activo = "Lobby"
-if 'f5co_desbloqueado' not in st.session_state:
-    st.session_state.f5co_desbloqueado = False
-
-# Simulación de Precios (Mientras implementamos DB)
 if 'precios' not in st.session_state:
-    st.session_state.precios = {
-        "Suscripción General": 10000,
-        "Microservicio": 3000
-    }
-
-# --- FUNCIÓN DE CARGA SEGURA ---
-def cargar_modulo(nombre_archivo):
-    ruta_completa = os.path.join(os.getcwd(), nombre_archivo)
-    if os.path.exists(ruta_completa):
-        spec = importlib.util.spec_from_file_location("modulo_dinamico", ruta_completa)
-        modulo = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(modulo)
-    else:
-        st.error(f"⚠️ El archivo '{nombre_archivo}' no se encuentra en la raíz.")
+    st.session_state.precios = {"General": 10000, "Micro": 3000}
 
 # --- ESTÉTICA DARK TOTAL ---
 st.markdown("""
     <style>
     .stApp { background-color: #000000; color: #FFFFFF; }
-    h1, h2, h3, h4, p, label { color: #FFFFFF !important; }
-    .lobby-card {
-        background-color: #1A1A1A; border: 1px solid #333;
-        padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 10px;
-    }
-    .f5co-card {
-        background-color: #001f1f; border: 1px solid #00e6e6;
-        padding: 20px; border-radius: 10px; text-align: center;
-    }
+    [data-testid="stHeader"] { background: rgba(0,0,0,0); }
+    h1, h2, h3, p, label { color: #FFFFFF !important; }
+    .stTextInput>div>div>input { background-color: #1A1A1A; color: white; border: 1px solid #333; }
+    .lobby-card { background-color: #111; border: 1px solid #333; padding: 20px; border-radius: 10px; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- LÓGICA DE NAVEGACIÓN ---
-if st.session_state.modulo_activo == "Lobby":
-    st.title("🌌 Welcome to the Hub - Universo X")
-    st.write(f"Precios Actuales: Gral ${st.session_state.precios['Suscripción General']} | Micro ${st.session_state.precios['Microservicio']} (Trimestral)")
-    st.divider()
+# --- LÓGICA DE ACCESO ---
+if not st.session_state.autenticado:
+    st.title("🚀 Acceso al Universo X")
+    tab_in, tab_reg = st.tabs(["INGRESAR", "CREAR CUENTA"])
 
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-        st.markdown('<div class="lobby-card"><h3>🚚 LOGÍSTICA</h3><p>Gestión de pedidos.</p></div>', unsafe_allow_html=True)
-        if st.button("ENTRAR A LOGÍSTICA"):
-            st.session_state.modulo_activo = "1_Logistica.py"; st.rerun()
-
-    with col2:
-        st.markdown('<div class="lobby-card"><h3>🚜 MÁQUINAS</h3><p>Control de flota.</p></div>', unsafe_allow_html=True)
-        if st.button("ENTRAR A MÁQUINAS"):
-            st.session_state.modulo_activo = "2_Maquinas.py"; st.rerun()
-
-    with col3:
-        st.markdown('<div class="f5co-card"><h3>🏦 F5CO</h3><p>Tesorería y Créditos.</p></div>', unsafe_allow_html=True)
-        llave_f5co = st.text_input("Llave Maestra F5CO", type="password", key="llave_f5")
-        if st.button("ACCEDER A FINANZAS"):
-            if llave_f5co == "10538":
-                st.session_state.modulo_activo = "F5CO"
+    with tab_in:
+        c_id = st.text_input("Número de Celular (ID)")
+        c_pw = st.text_input("Código Secreto", type="password")
+        if st.button("SINCRONIZAR"):
+            users = cargar_usuarios()
+            if c_id in users and users[c_id]["clave"] == c_pw:
+                st.session_state.autenticado = True
+                st.session_state.user_id = c_id
+                st.session_state.datos_usuario = users[c_id]
                 st.rerun()
             else:
-                st.error("Llave incorrecta")
+                st.error("Credenciales no reconocidas.")
 
-    with col4:
-        st.markdown('<div class="lobby-card"><h3>🐍 CACD</h3><p>Reporte médico.</p></div>', unsafe_allow_html=True)
-        if st.button("ENTRAR A CACD"):
-            st.session_state.modulo_activo = "x_cacd.py"; st.rerun()
+    with tab_reg:
+        st.subheader("Nuevo Registro de Usuario")
+        reg_cel = st.text_input("Número Celular (Este será tu ID)")
+        reg_pais = st.selectbox("País", ["Colombia", "España", "Otro"])
+        reg_nom = st.text_input("Nombre de Usuario")
+        reg_nac = st.date_input("Fecha de Nacimiento", min_value=date(1940, 1, 1))
+        reg_pw = st.text_input("Definir Código Secreto", type="password")
+        reg_ind = st.text_input("Indicio de tu código (Pista)")
 
-elif st.session_state.modulo_activo == "F5CO":
-    st.title("🏦 Panel Bancario F5CO")
-    if st.button("⬅️ VOLVER AL LOBBY"):
-        st.session_state.modulo_activo = "Lobby"; st.rerun()
-    
-    tab1, tab2 = st.tabs(["💰 CARGA DE SALDOS", "⚙️ CONFIGURACIÓN DE PRECIOS"])
+        if st.button("DAR DE ALTA EN X"):
+            if reg_cel and reg_pw and reg_nom:
+                usuarios = cargar_usuarios()
+                if reg_cel in usuarios:
+                    st.warning("Este ID ya existe.")
+                else:
+                    usuarios[reg_cel] = {
+                        "nombre": reg_nom,
+                        "pais": reg_pais,
+                        "nacimiento": str(reg_nac),
+                        "clave": reg_pw,
+                        "indicio": reg_ind,
+                        "saldo": 0.0,  # Campo solicitado
+                        "rol": "Usuario"
+                    }
+                    guardar_usuarios(usuarios)
+                    st.success("Cuenta creada. Ahora puedes ingresar.")
+            else:
+                st.error("Por favor completa los datos obligatorios.")
 
-    with tab1:
-        st.subheader("Maestro de Cargas (Dinero Virtual)")
-        col_c1, col_c2 = st.columns(2)
-        id_usuario = col_c1.text_input("ID del Usuario / Suscriptor")
-        monto = col_c2.number_input("Monto Recibido (Efectivo)", min_value=0, step=1000)
-        
-        if st.button("💎 CONFIRMAR CARGA DE SALDO"):
-            st.success(f"Se han abonado ${monto:,} al ID {id_usuario}. El usuario ya puede descontar de su plataforma.")
-
-    with tab2:
-        st.subheader("Ajuste de Tarifas Trimestrales")
-        p_gral = st.number_input("Suscripción X General", value=st.session_state.precios["Suscripción General"])
-        p_micro = st.number_input("Suscripción por Microservicio", value=st.session_state.precios["Microservicio"])
-        
-        if st.button("💾 ACTUALIZAR PRECIOS EN EL HUB"):
-            st.session_state.precios["Suscripción General"] = p_gral
-            st.session_state.precios["Microservicio"] = p_micro
-            st.success("Precios actualizados para todo el sistema.")
-
+# --- PANEL DE CONTROL (POST-LOGIN) ---
 else:
-    # Carga de módulos externos (Logística, Máquinas, CACD)
-    if st.sidebar.button("⬅️ REGRESAR AL HUB"):
-        st.session_state.modulo_activo = "Lobby"; st.rerun()
-    cargar_modulo(st.session_state.modulo_activo)
+    u = st.session_state.datos_usuario
+    
+    if st.session_state.modulo_activo == "Lobby":
+        st.title(f"🌌 Lobby - Bienvenido {u['nombre']}")
+        st.sidebar.write(f"💰 Saldo: ${u['saldo']:,}")
+        
+        if st.sidebar.button("Cerrar Sesión"):
+            st.session_state.autenticado = False
+            st.rerun()
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown('<div class="lobby-card"><h3>🚚 Logística</h3></div>', unsafe_allow_html=True)
+            if st.button("ENTRAR", key="btn_log"):
+                st.session_state.modulo_activo = "1_Logistica.py"; st.rerun()
+        
+        with col2:
+            st.markdown('<div class="lobby-card"><h3>🏦 F5CO</h3></div>', unsafe_allow_html=True)
+            f5_pass = st.text_input("Llave F5CO", type="password")
+            if st.button("ACCEDER"):
+                if f5_pass == "10538":
+                    st.session_state.modulo_activo = "F5CO"; st.rerun()
+
+    elif st.session_state.modulo_activo == "F5CO":
+        st.title("🏦 Panel F5CO - Tesorería")
+        if st.button("⬅️ REGRESAR"):
+            st.session_state.modulo_activo = "Lobby"; st.rerun()
+        
+        t1, t2 = st.tabs(["💰 CARGA DE SALDO", "⚙️ PRECIOS"])
+        
+        with t1:
+            id_dest = st.text_input("ID de Usuario (Celular)")
+            monto = st.number_input("Monto en Efectivo", min_value=0)
+            if st.button("CONFIRMAR ABONO"):
+                db = cargar_usuarios()
+                if id_dest in db:
+                    db[id_dest]["saldo"] += monto
+                    guardar_usuarios(db)
+                    st.success(f"Abono de ${monto} exitoso para {db[id_dest]['nombre']}")
+                else:
+                    st.error("Usuario no encontrado.")
