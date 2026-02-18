@@ -32,18 +32,36 @@ def cargar_modulo(nombre_archivo):
         spec.loader.exec_module(m)
     else: st.error(f"⚠️ Módulo {nombre_archivo} no encontrado.")
 
-# --- FUNCIÓN VISUALIZADOR PDF (UBICADO EN RAÍZ) ---
+# --- FUNCIÓN VISUALIZADOR PDF (REFORZADA CONTRA BLOQUEOS) ---
 def mostrar_pdf(nombre_archivo):
     # BUSCA DIRECTAMENTE EN LA RAÍZ DEL PROYECTO (Universo_X_Dev)
     ruta_pdf = os.path.join(os.getcwd(), nombre_archivo)
     
     if os.path.exists(ruta_pdf):
         with open(ruta_pdf, "rb") as f:
-            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
-        st.markdown(pdf_display, unsafe_allow_html=True)
+            pdf_bytes = f.read()
+        
+        st.success("✅ ¡Manual encontrado con éxito!")
+        
+        col_descarga, col_link = st.columns(2)
+        
+        with col_descarga:
+            # Opción 1: Descarga directa (La más confiable)
+            st.download_button(
+                label="📥 DESCARGAR MANUAL PDF",
+                data=pdf_bytes,
+                file_name=nombre_archivo,
+                mime="application/pdf",
+                help="Haz clic para guardar el archivo en tu dispositivo"
+            )
+        
+        with col_link:
+            # Opción 2: Enlace para abrir en pestaña nueva (Evita carita triste de Chrome)
+            base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+            href = f'<a href="data:application/pdf;base64,{base64_pdf}" target="_blank" style="background-color: #00e6e6; color: black; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">👁️ VER EN PESTAÑA NUEVA</a>'
+            st.markdown(href, unsafe_allow_html=True)
+            
     else: 
-        # MENSAJE DE ERROR PARA CONFIRMAR LA RUTA EN PANTALLA
         st.error(f"⚠️ El PDF no está en la raíz del proyecto. Buscado en: {ruta_pdf}")
 
 # --- ESTADO DE SESIÓN ---
@@ -55,7 +73,7 @@ st.markdown("""
     <style>
     .stApp { background-color: #000; color: #FFFFFF; }
     label, p, span, div, .stMarkdown, .stSubheader, .stTitle, .stHeader { color: #FFFFFF !important; }
-    /* Letras negras exclusivas para el Sidebar según solicitud */
+    /* Letras negras para el Sidebar */
     [data-testid="stSidebar"] label, 
     [data-testid="stSidebar"] p, 
     [data-testid="stSidebar"] span, 
@@ -114,7 +132,7 @@ elif st.session_state.modulo_activo == "X_Usuarios":
         target = st.selectbox("Seleccione el usuario a editar", options=list(db_u.keys()))
         if target:
             u_d = db_u[target]
-            st.info(f"Editando ID: {target} | Cuenta: {u_d.get('cuenta_f5co', 'None')}")
+            st.info(f"Editando ID: {target}")
             with st.form("ed_maestro"):
                 col1, col2 = st.columns(2)
                 n_nom = col1.text_input("Nombre Completo", value=u_d.get('nombre_completo'))
@@ -133,7 +151,7 @@ elif st.session_state.modulo_activo == "F5CO":
     if st.button("⬅️ VOLVER"): st.session_state.modulo_activo = "Lobby"; st.session_state.autenticado = False; st.rerun()
     st.info("Bóveda financiera vinculada a f5co_cuentas.json")
 
-# --- LOBBY Y CONOCIMIENTO ---
+# --- LOBBY ---
 else:
     db_u = cargar_json(ARCHIVO_USUARIOS)
     db_c = cargar_json(ARCHIVO_CUENTAS)
@@ -170,7 +188,7 @@ else:
         col_p, col_i = st.columns([0.7, 0.3])
         with col_i:
             st.info("📖 Manual de Aceite Hidráulico")
-            if st.button("🔓 ABRIR PDF"): st.session_state.ver_pdf = True
+            if st.button("🔓 ABRIR OPCIONES"): st.session_state.ver_pdf = True
         with col_p:
             if st.session_state.get('ver_pdf'):
                 mostrar_pdf("aceite_hidraulico.pdf")
