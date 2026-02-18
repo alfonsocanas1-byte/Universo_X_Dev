@@ -32,18 +32,19 @@ def cargar_modulo(nombre_archivo):
         spec.loader.exec_module(m)
     else: st.error(f"⚠️ Módulo {nombre_archivo} no encontrado.")
 
-# --- FUNCIÓN VISUALIZADOR PDF ---
+# --- FUNCIÓN VISUALIZADOR PDF (UBICADO EN RAÍZ) ---
 def mostrar_pdf(nombre_archivo):
-    # Ajuste de ruta: Busca en la carpeta Conocimiento dentro de Universo_X_Dev
-    ruta_pdf = os.path.join(os.getcwd(), "Conocimiento", nombre_archivo)
+    # BUSCA DIRECTAMENTE EN LA RAÍZ DEL PROYECTO (Universo_X_Dev)
+    ruta_pdf = os.path.join(os.getcwd(), nombre_archivo)
     
     if os.path.exists(ruta_pdf):
         with open(ruta_pdf, "rb") as f:
             base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="700" type="application/pdf"></iframe>'
+        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
         st.markdown(pdf_display, unsafe_allow_html=True)
     else: 
-        st.error(f"⚠️ No se halló el archivo en: {ruta_pdf}")
+        # MENSAJE DE ERROR PARA CONFIRMAR LA RUTA EN PANTALLA
+        st.error(f"⚠️ El PDF no está en la raíz del proyecto. Buscado en: {ruta_pdf}")
 
 # --- ESTADO DE SESIÓN ---
 if 'autenticado' not in st.session_state: st.session_state.autenticado = False
@@ -54,7 +55,11 @@ st.markdown("""
     <style>
     .stApp { background-color: #000; color: #FFFFFF; }
     label, p, span, div, .stMarkdown, .stSubheader, .stTitle, .stHeader { color: #FFFFFF !important; }
-    [data-testid="stSidebar"] label, [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] div {
+    /* Letras negras exclusivas para el Sidebar según solicitud */
+    [data-testid="stSidebar"] label, 
+    [data-testid="stSidebar"] p, 
+    [data-testid="stSidebar"] span, 
+    [data-testid="stSidebar"] div {
         color: #000000 !important;
     }
     .card { background: #111; border: 1px solid #333; padding: 20px; border-radius: 10px; text-align: center; }
@@ -85,35 +90,48 @@ if not st.session_state.autenticado and st.session_state.modulo_activo not in ["
             st.rerun()
         else: st.error("Acceso denegado.")
 
-# --- MÓDULO X USUARIOS ---
+# --- MÓDULO X USUARIOS (EDITOR MAESTRO) ---
 elif st.session_state.modulo_activo == "X_Usuarios":
-    st.title("👤 Gestión: X Usuarios")
-    if st.button("⬅️ VOLVER"): st.session_state.modulo_activo = "Lobby"; st.session_state.autenticado = False; st.rerun()
+    st.title("👤 Editor Maestro de usuarios_x.json")
+    if st.button("⬅️ VOLVER AL PORTAL"): 
+        st.session_state.modulo_activo = "Lobby"
+        st.session_state.autenticado = False
+        st.rerun()
+    
     db_u = cargar_json(ARCHIVO_USUARIOS)
-    t1, t2 = st.tabs(["🗑️ ELIMINAR", "✏️ EDITAR PERFIL"])
+    t1, t2 = st.tabs(["🗑️ ELIMINAR IDENTIDADES", "✏️ GESTIÓN DE USUARIOS (EDITAR)"])
+    
     with t1:
-        if st.checkbox("Desplegar usuarios"):
+        if st.checkbox("Desplegar usuarios para eliminación"):
             for cel, info in db_u.items():
-                col_u, col_b = st.columns([0.8, 0.2])
-                col_u.write(f"**{info.get('nombre_completo')}** ({cel})")
-                if col_b.button("BORRAR", key=f"d_{cel}"):
-                    del db_u[cel]; guardar_json(db_u, ARCHIVO_USUARIOS); st.rerun()
+                c1, c2 = st.columns([0.8, 0.2])
+                c1.write(f"**{info.get('nombre_completo')}** ({cel})")
+                if c2.button("BORRAR", key=f"d_{cel}"):
+                    del db_u[cel]
+                    guardar_json(db_u, ARCHIVO_USUARIOS); st.rerun()
+
     with t2:
-        target = st.text_input("Digite celular exacto")
-        if target in db_u:
-            with st.form("ed"):
-                u_d = db_u[target]
-                n_nom = st.text_input("Nombre", value=u_d.get('nombre_completo'))
-                n_usr = st.text_input("Username", value=u_d.get('username'))
-                if st.form_submit_button("ACTUALIZAR"):
-                    db_u[target].update({"nombre_completo": n_nom, "username": n_usr})
-                    guardar_json(db_u, ARCHIVO_USUARIOS); st.success("Guardado.")
+        target = st.selectbox("Seleccione el usuario a editar", options=list(db_u.keys()))
+        if target:
+            u_d = db_u[target]
+            st.info(f"Editando ID: {target} | Cuenta: {u_d.get('cuenta_f5co', 'None')}")
+            with st.form("ed_maestro"):
+                col1, col2 = st.columns(2)
+                n_nom = col1.text_input("Nombre Completo", value=u_d.get('nombre_completo'))
+                n_usr = col2.text_input("Username", value=u_d.get('username'))
+                n_pw = col1.text_input("Clave Secreta", value=u_d.get('clave'))
+                n_saldo = col2.number_input("Saldo Manual", value=float(u_d.get('saldo', 0.0)))
+                n_ind = col1.text_input("Indicio Clave", value=u_d.get('indicio'))
+                n_res = col2.text_input("Respuesta Secreta", value=u_d.get('respuesta_secreta'))
+                if st.form_submit_button("💾 GUARDAR"):
+                    db_u[target].update({"nombre_completo": n_nom, "username": n_usr, "clave": n_pw, "saldo": n_saldo, "indicio": n_ind, "respuesta_secreta": n_res})
+                    guardar_json(db_u, ARCHIVO_USUARIOS); st.success("Cambios aplicados."); st.rerun()
 
 # --- MÓDULO F5CO ---
 elif st.session_state.modulo_activo == "F5CO":
     st.title("🏦 Tesorería F5CO")
     if st.button("⬅️ VOLVER"): st.session_state.modulo_activo = "Lobby"; st.session_state.autenticado = False; st.rerun()
-    st.info("Sistema vinculado a f5co_cuentas.json")
+    st.info("Bóveda financiera vinculada a f5co_cuentas.json")
 
 # --- LOBBY Y CONOCIMIENTO ---
 else:
@@ -155,7 +173,6 @@ else:
             if st.button("🔓 ABRIR PDF"): st.session_state.ver_pdf = True
         with col_p:
             if st.session_state.get('ver_pdf'):
-                # Busca el archivo dentro de Universo_X_Dev/Conocimiento
                 mostrar_pdf("aceite_hidraulico.pdf")
     else:
         if st.sidebar.button("⬅️ REGRESAR AL HUB"): st.session_state.modulo_activo = "Lobby"; st.rerun()
