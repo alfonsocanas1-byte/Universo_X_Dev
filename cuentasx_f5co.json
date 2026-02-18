@@ -8,13 +8,18 @@
         },
         "servicios_f5co": {
             "microservicios": {
-                "activo": false,
+                "activo": true,
                 "nivel_acceso": "estándar"
             },
-            "plataforma_descargables": {
+            "microservicios_especializados": {
                 "activo": false,
-                "limite_descargas": 0,
-                "categoria": "ninguna"
+                "descripcion": "Acceso a IA avanzada y análisis predictivo",
+                "estado_curaduria": "pendiente"
+            },
+            "plataforma_descargables": {
+                "activo": true,
+                "limite_descargas": 50,
+                "categoria": "Premium"
             },
             "galeria_arte": {
                 "activo": false,
@@ -24,7 +29,7 @@
         },
         "panel_maestro": {
             "bloqueo_global": false,
-            "notas_administrador": "Registro inicial desde usuarios_x"
+            "notas_administrador": "Habilitar Microservicios Especializados previa validación técnica."
         }
     }
 }
