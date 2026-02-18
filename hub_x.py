@@ -33,18 +33,21 @@ def cargar_modulo(nombre_archivo):
     else: st.error(f"⚠️ Módulo {nombre_archivo} no encontrado.")
 
 # --- FUNCIÓN VISUALIZADOR PDF ---
-def mostrar_pdf(ruta_pdf):
+def mostrar_pdf(nombre_archivo):
+    # Ajuste de ruta: Busca en la carpeta Conocimiento dentro de Universo_X_Dev
+    ruta_pdf = os.path.join(os.getcwd(), "Conocimiento", nombre_archivo)
+    
     if os.path.exists(ruta_pdf):
         with open(ruta_pdf, "rb") as f:
             base64_pdf = base64.b64encode(f.read()).decode('utf-8')
         pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="700" type="application/pdf"></iframe>'
         st.markdown(pdf_display, unsafe_allow_html=True)
-    else: st.error("⚠️ Archivo PDF no hallado en Conocimiento.")
+    else: 
+        st.error(f"⚠️ No se halló el archivo en: {ruta_pdf}")
 
 # --- ESTADO DE SESIÓN ---
 if 'autenticado' not in st.session_state: st.session_state.autenticado = False
 if 'modulo_activo' not in st.session_state: st.session_state.modulo_activo = "Lobby"
-if 'precios' not in st.session_state: st.session_state.precios = {"Microservicio": 3000}
 
 # --- ESTÉTICA DARK TOTAL ---
 st.markdown("""
@@ -148,11 +151,12 @@ else:
         st.header("📚 CONOCIMIENTO TÉCNICO")
         col_p, col_i = st.columns([0.7, 0.3])
         with col_i:
-            st.info("📖 Aceite Hidráulico")
+            st.info("📖 Manual de Aceite Hidráulico")
             if st.button("🔓 ABRIR PDF"): st.session_state.ver_pdf = True
         with col_p:
             if st.session_state.get('ver_pdf'):
-                mostrar_pdf("Conocimiento/aceite_hidraulico.pdf")
+                # Busca el archivo dentro de Universo_X_Dev/Conocimiento
+                mostrar_pdf("aceite_hidraulico.pdf")
     else:
         if st.sidebar.button("⬅️ REGRESAR AL HUB"): st.session_state.modulo_activo = "Lobby"; st.rerun()
         cargar_modulo(st.session_state.modulo_activo)
