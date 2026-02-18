@@ -1,0 +1,30 @@
+{
+    "3122204688": {
+        "identidad": "Alfonso_Maestro",
+        "verificacion": {
+            "metodo": "WhatsApp_Contact_Pay",
+            "estado": "Verificado",
+            "fecha_activacion": "2026-02-18"
+        },
+        "servicios_f5co": {
+            "microservicios": {
+                "activo": false,
+                "nivel_acceso": "estándar"
+            },
+            "plataforma_descargables": {
+                "activo": false,
+                "limite_descargas": 0,
+                "categoria": "ninguna"
+            },
+            "galeria_arte": {
+                "activo": false,
+                "exposiciones_premium": false,
+                "estado_curaduria": "pendiente"
+            }
+        },
+        "panel_maestro": {
+            "bloqueo_global": false,
+            "notas_administrador": "Registro inicial desde usuarios_x"
+        }
+    }
+}
