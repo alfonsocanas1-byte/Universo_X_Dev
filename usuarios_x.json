@@ -6,6 +6,9 @@
         "nacimiento": "1992-01-01",
         "clave": "10538",
         "indicio": "cedu 5",
-        "respuesta_secreta": "Cali"
+        "respuesta_secreta": "Cali",
+        "estado_cuenta": "activa",
+        "fecha_creacion": "2026-02-19",
+        "fecha_vencimiento": "2026-03-06"
     }
 }
