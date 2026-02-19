@@ -40,144 +40,107 @@ st.markdown("""
     <style>
     .stApp { background-color: #000; color: #FFFFFF; }
     h1, h2, h3, p, label { color: #00e6e6 !important; }
-    .stButton>button { background-color: #FFFFFF !important; color: #000 !important; font-weight: bold !important; width: 100%; border: 2px solid #00e6e6 !important; }
-    .stButton>button:hover { background-color: #00e6e6 !important; }
-    .card { background: #111; border: 1px solid #333; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 10px; }
-    .subs-info { background-color: #111; padding: 10px; border-radius: 5px; border-left: 3px solid #00e6e6; margin-bottom: 20px; }
+    .stButton>button { background-color: #111 !important; color: #fff !important; border: 1px solid #333 !important; height: 60px; font-size: 18px; }
+    .stButton>button:hover { border-color: #00e6e6 !important; color: #00e6e6 !important; }
+    .card-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- PANEL MAESTRO (FUNCIÓN DE RENDERIZADO) ---
+# --- PANEL MAESTRO ---
 def renderizar_panel_maestro():
-    st.title("🛠️ PANEL MAESTRO - Control Total")
-    if st.button("⬅️ VOLVER AL HUB / LOBBY"): 
+    st.title("🛠️ PANEL MAESTRO")
+    if st.button("⬅️ VOLVER AL HUB"): 
         st.session_state.modulo_activo = "Lobby"
         st.rerun()
-
-    db_u = cargar_json(ARCHIVO_USUARIOS)
     
-    # Lista desplegable de usuarios registrados
-    id_usuario = st.selectbox("Seleccionar Usuario para gestionar", options=list(db_u.keys()), 
-                              format_func=lambda x: f"{db_u[x].get('username', 'Sin nombre')} ({x})")
+    db_u = cargar_json(ARCHIVO_USUARIOS)
+    id_usuario = st.selectbox("Gestionar Usuario", options=list(db_u.keys()))
     
     if id_usuario:
-        u_dat = db_u[id_usuario]
-        st.markdown(f"### Gestión de Cuenta: **{u_dat.get('username')}**")
-        
+        u = db_u[id_usuario]
         col1, col2 = st.columns(2)
         with col1:
-            estado_actual = u_dat.get('estado_cuenta', 'activa')
-            nuevo_estado = st.selectbox("Cambiar Estado de Cuenta", ["activa", "desactiva", "bloqueada"], 
-                                        index=["activa", "desactiva", "bloqueada"].index(estado_actual))
-        
+            nuevo_estado = st.selectbox("Estado", ["activa", "desactiva"], index=0 if u.get('estado_cuenta')=="activa" else 1)
         with col2:
-            f_venc_str = u_dat.get('fecha_vencimiento', str(datetime.now().date()))
-            nueva_fecha = st.date_input("Nueva Fecha de Vencimiento", value=datetime.strptime(f_venc_str, '%Y-%m-%d'))
+            nueva_fecha = st.date_input("Vencimiento", value=datetime.strptime(u.get('fecha_vencimiento', '2026-03-06'), '%Y-%m-%d'))
         
-        st.divider()
-        if st.button("💾 APLICAR CAMBIOS MAESTROS"):
+        if st.button("💾 GUARDAR CAMBIOS"):
             db_u[id_usuario]['estado_cuenta'] = nuevo_estado
             db_u[id_usuario]['fecha_vencimiento'] = str(nueva_fecha)
             guardar_json(db_u, ARCHIVO_USUARIOS)
-            st.success(f"✅ Los cambios para {id_usuario} han sido guardados en el sistema.")
-            st.rerun()
+            st.success("Usuario actualizado.")
 
-# --- INTERFAZ DE ENTRADA (LOGIN / REGISTRO) ---
+# --- INTERFAZ ---
 if not st.session_state.autenticado and st.session_state.modulo_activo != "PanelMaestro":
-    st.title("🚀 Acceso al Universo X")
-    t_log, t_reg = st.tabs(["🔐 INGRESAR", "📝 REGISTRARME"])
-
-    with t_log:
-        with st.form("login_form"):
-            u_id = st.text_input("Número de Celular")
-            u_pw = st.text_input("Clave", type="password")
-            if st.form_submit_button("SINCRONIZAR"):
-                db_u = cargar_json(ARCHIVO_USUARIOS)
-                if u_id in db_u and str(db_u[u_id]["clave"]) == str(u_pw):
-                    st.session_state.autenticado = True
-                    st.session_state.user_id = u_id
-                    st.rerun()
-                else: st.error("Acceso denegado. Verifique sus credenciales.")
-
-    with t_reg:
-        with st.form("reg_form"):
-            r_id = st.text_input("Número de Celular (ID)")
-            r_user = st.text_input("Nombre de Usuario")
-            r_pw = st.text_input("Definir Clave", type="password")
-            if st.form_submit_button("CREAR MI CUENTA"):
-                db_u = cargar_json(ARCHIVO_USUARIOS)
-                if r_id in db_u: st.error("Este número ya existe.")
-                elif r_id and r_pw:
-                    hoy = datetime.now().date()
-                    db_u[r_id] = {
-                        "username": r_user,
-                        "clave": r_pw,
-                        "estado_cuenta": "activa",
-                        "fecha_vencimiento": str(hoy + timedelta(days=15))
-                    }
-                    guardar_json(db_u, ARCHIVO_USUARIOS)
-                    st.success("✅ Registro exitoso con 15 días de cortesía.")
-                else: st.warning("Complete los campos obligatorios.")
-
-    # Acceso administrativo externo
-    st.write("---")
-    master_key = st.text_input("🔒 Acceso de Administrador", type="password")
-    if master_key == "10538":
-        if st.button("ABRIR PANEL MAESTRO"):
-            st.session_state.modulo_activo = "PanelMaestro"
+    st.title("🚀 Universo X")
+    u_id = st.text_input("Celular (ID)")
+    u_pw = st.text_input("Clave", type="password")
+    if st.button("INGRESAR"):
+        db_u = cargar_json(ARCHIVO_USUARIOS)
+        if u_id in db_u and str(db_u[u_id]["clave"]) == str(u_pw):
+            st.session_state.autenticado = True
+            st.session_state.user_id = u_id
             st.rerun()
+    
+    st.divider()
+    m_key = st.text_input("🔑 Acceso Maestro", type="password")
+    if m_key == "10538" and st.button("ABRIR PANEL"):
+        st.session_state.modulo_activo = "PanelMaestro"
+        st.rerun()
 
-# --- LÓGICA DE NAVEGACIÓN POST-LOGIN ---
 elif st.session_state.modulo_activo == "PanelMaestro":
     renderizar_panel_maestro()
 
 elif st.session_state.autenticado:
+    # Sidebar
     u_id = st.session_state.user_id
-    db_u = cargar_json(ARCHIVO_USUARIOS)
-    user = db_u.get(u_id, {})
-
-    # Cálculos de suscripción
-    f_v = datetime.strptime(user.get('fecha_vencimiento', '2000-01-01'), '%Y-%m-%d').date()
-    hoy = datetime.now().date()
-    dias = (f_v - hoy).days
-    
-    # Barra lateral
+    user = cargar_json(ARCHIVO_USUARIOS).get(u_id, {})
     st.sidebar.title(f"👤 {user.get('username')}")
-    st.sidebar.markdown(f"""
-    <div class='subs-info'>
-        <b>Estado:</b> {user.get('estado_cuenta', 'S/N').upper()}<br>
-        <b>Vence:</b> {f_v.strftime('%d/%m/%Y')}<br>
-        <b>Días:</b> <span style='color:{'#ff4b4b' if dias <= 3 else '#00e6e6'};'>{max(0, dias)}</span>
-    </div>
-    """, unsafe_allow_html=True)
-    
+    if user.get('clave') == "10538":
+        if st.sidebar.button("🛠️ PANEL MAESTRO"):
+            st.session_state.modulo_activo = "PanelMaestro"
+            st.rerun()
     if st.sidebar.button("Cerrar Sesión"):
         st.session_state.autenticado = False
         st.rerun()
 
-    # Si el usuario es el maestro (10538), mostrar botón administrativo
-    if str(user.get('clave')) == "10538":
-        if st.sidebar.button("🛠️ PANEL MAESTRO"):
-            st.session_state.modulo_activo = "PanelMaestro"
-            st.rerun()
-
-    # Validación de bloqueo
-    if (hoy > f_v or user.get('estado_cuenta') != "activa") and st.session_state.modulo_activo == "Lobby":
-        st.error("🚨 SERVICIO SUSPENDIDO")
-        st.info(f"Contactar por WhatsApp al **3122204688** para pago de suscripción.")
-        st.stop()
-
     if st.session_state.modulo_activo == "Lobby":
-        st.title("🌌 Hub Central - Universo X")
-        c1, c2, c3, c4 = st.columns(4)
+        st.title("🌌 Hub Central de Microservicios")
+
+        # 1. MICROSERVICIOS OPERATIVOS
+        st.markdown("<div class='card-title'>⚙️ OPERACIONES</div>", unsafe_allow_html=True)
+        c1, c2, c3 = st.columns(3)
         with c1: 
             if st.button("🚚 LOGÍSTICA"): st.session_state.modulo_activo = "1_Logistica.py"; st.rerun()
         with c2: 
             if st.button("🚜 MÁQUINAS"): st.session_state.modulo_activo = "2_Maquinas.py"; st.rerun()
         with c3: 
-            if st.button("🍔 COCINA"): st.session_state.modulo_activo = "3_restaurante.py"; st.rerun()
+            if st.button("🍔 RESTAURANTE"): st.session_state.modulo_activo = "3_restaurante.py"; st.rerun()
+
+        # 2. NUEVOS SERVICIOS
+        st.divider()
+        st.markdown("<div class='card-title'>📦 SUMINISTROS Y SALUD</div>", unsafe_allow_html=True)
+        c4, c5, c6 = st.columns(3)
         with c4: 
-            if st.button("🐍 CACD (IA)"): st.session_state.modulo_activo = "x_cacd.py"; st.rerun()
+            if st.button("🛒 ALACENA / MERCADO"): st.info("Módulo Alacena en desarrollo...")
+        with c5: 
+            if st.button("🌱 AGRO-PRO"): st.info("Módulo Agro-Pro en desarrollo...")
+        with c6: 
+            if st.button("🦷 ODONTOLOGÍA"): st.info("Módulo Odontología en desarrollo...")
+
+        # 3. ESPECIALIZADOS Y CONTENIDO
+        st.divider()
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("<div class='card-title'>🧬 ESPECIALIZADO</div>", unsafe_allow_html=True)
+            if st.button("🐍 CACD (IA OFÍDICA)"): st.session_state.modulo_activo = "x_cacd.py"; st.rerun()
+        with col_b:
+            st.markdown("<div class='card-title'>💎 CONTENIDO</div>", unsafe_allow_html=True)
+            ca, cb = st.columns(2)
+            with ca: 
+                if st.button("🎨 GALERÍA ARTE"): st.info("Cargando Galería...")
+            with cb: 
+                if st.button("📑 DESCARGABLES"): st.info("Abriendo Biblioteca Técnica...")
     else:
         if st.sidebar.button("⬅️ VOLVER AL HUB"): 
             st.session_state.modulo_activo = "Lobby"
