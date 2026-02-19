@@ -47,43 +47,49 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- PANEL MAESTRO ---
+# --- PANEL MAESTRO (FUNCIÓN DE RENDERIZADO) ---
 def renderizar_panel_maestro():
-    st.title("🛠️ PANEL MAESTRO - Gestión Universo X")
-    if st.button("⬅️ VOLVER AL HUB"): 
+    st.title("🛠️ PANEL MAESTRO - Control Total")
+    if st.button("⬅️ VOLVER AL HUB / LOBBY"): 
         st.session_state.modulo_activo = "Lobby"
         st.rerun()
 
     db_u = cargar_json(ARCHIVO_USUARIOS)
-    id_usuario = st.selectbox("Seleccionar Usuario", options=list(db_u.keys()), 
-                              format_func=lambda x: f"{db_u[x].get('username', 'S/N')} ({x})")
+    
+    # Lista desplegable de usuarios registrados
+    id_usuario = st.selectbox("Seleccionar Usuario para gestionar", options=list(db_u.keys()), 
+                              format_func=lambda x: f"{db_u[x].get('username', 'Sin nombre')} ({x})")
     
     if id_usuario:
         u_dat = db_u[id_usuario]
-        st.subheader(f"Gestión de {u_dat.get('username')}")
+        st.markdown(f"### Gestión de Cuenta: **{u_dat.get('username')}**")
+        
         col1, col2 = st.columns(2)
         with col1:
             estado_actual = u_dat.get('estado_cuenta', 'activa')
-            nuevo_estado = st.selectbox("Estado de Cuenta", ["activa", "desactiva", "bloqueada"], index=["activa", "desactiva", "bloqueada"].index(estado_actual))
+            nuevo_estado = st.selectbox("Cambiar Estado de Cuenta", ["activa", "desactiva", "bloqueada"], 
+                                        index=["activa", "desactiva", "bloqueada"].index(estado_actual))
+        
         with col2:
             f_venc_str = u_dat.get('fecha_vencimiento', str(datetime.now().date()))
-            nueva_fecha = st.date_input("Fecha Vencimiento", value=datetime.strptime(f_venc_str, '%Y-%m-%d'))
+            nueva_fecha = st.date_input("Nueva Fecha de Vencimiento", value=datetime.strptime(f_venc_str, '%Y-%m-%d'))
         
-        if st.button("💾 GUARDAR CAMBIOS"):
+        st.divider()
+        if st.button("💾 APLICAR CAMBIOS MAESTROS"):
             db_u[id_usuario]['estado_cuenta'] = nuevo_estado
             db_u[id_usuario]['fecha_vencimiento'] = str(nueva_fecha)
             guardar_json(db_u, ARCHIVO_USUARIOS)
-            st.success("Suscripción actualizada.")
+            st.success(f"✅ Los cambios para {id_usuario} han sido guardados en el sistema.")
             st.rerun()
 
-# --- INTERFAZ DE ACCESO (LOGIN / REGISTRO) ---
+# --- INTERFAZ DE ENTRADA (LOGIN / REGISTRO) ---
 if not st.session_state.autenticado and st.session_state.modulo_activo != "PanelMaestro":
-    st.title("🚀 Bienvenido al Universo X")
-    tab_log, tab_reg = st.tabs(["🔐 INGRESAR", "📝 REGISTRARME"])
+    st.title("🚀 Acceso al Universo X")
+    t_log, t_reg = st.tabs(["🔐 INGRESAR", "📝 REGISTRARME"])
 
-    with tab_log:
-        with st.form("login"):
-            u_id = st.text_input("Número de Celular (WhatsApp)")
+    with t_log:
+        with st.form("login_form"):
+            u_id = st.text_input("Número de Celular")
             u_pw = st.text_input("Clave", type="password")
             if st.form_submit_button("SINCRONIZAR"):
                 db_u = cargar_json(ARCHIVO_USUARIOS)
@@ -91,80 +97,78 @@ if not st.session_state.autenticado and st.session_state.modulo_activo != "Panel
                     st.session_state.autenticado = True
                     st.session_state.user_id = u_id
                     st.rerun()
-                else: st.error("Datos incorrectos. Verifique su número y clave.")
+                else: st.error("Acceso denegado. Verifique sus credenciales.")
 
-    with tab_reg:
-        with st.form("registro"):
-            r_id = st.text_input("Número de Celular (Será su ID de acceso)")
-            r_name = st.text_input("Nombre Completo")
+    with t_reg:
+        with st.form("reg_form"):
+            r_id = st.text_input("Número de Celular (ID)")
             r_user = st.text_input("Nombre de Usuario")
-            r_pw = st.text_input("Clave de Seguridad", type="password")
-            if st.form_submit_button("CREAR CUENTA"):
+            r_pw = st.text_input("Definir Clave", type="password")
+            if st.form_submit_button("CREAR MI CUENTA"):
                 db_u = cargar_json(ARCHIVO_USUARIOS)
-                if r_id in db_u:
-                    st.error("Este número ya está registrado.")
+                if r_id in db_u: st.error("Este número ya existe.")
                 elif r_id and r_pw:
                     hoy = datetime.now().date()
                     db_u[r_id] = {
-                        "nombre_completo": r_name,
                         "username": r_user,
                         "clave": r_pw,
                         "estado_cuenta": "activa",
-                        "fecha_creacion": str(hoy),
                         "fecha_vencimiento": str(hoy + timedelta(days=15))
                     }
                     guardar_json(db_u, ARCHIVO_USUARIOS)
-                    st.success("✅ Cuenta creada con 15 días de suscripción gratuita. ¡Ya puede ingresar!")
-                else: st.warning("Por favor complete los campos obligatorios.")
+                    st.success("✅ Registro exitoso con 15 días de cortesía.")
+                else: st.warning("Complete los campos obligatorios.")
 
-    if st.text_input("Llave Administrativa", type="password") == "10538":
-        if st.button("ACCESO MAESTRO"): 
+    # Acceso administrativo externo
+    st.write("---")
+    master_key = st.text_input("🔒 Acceso de Administrador", type="password")
+    if master_key == "10538":
+        if st.button("ABRIR PANEL MAESTRO"):
             st.session_state.modulo_activo = "PanelMaestro"
             st.rerun()
 
-# --- INTERFAZ POST-LOGIN ---
+# --- LÓGICA DE NAVEGACIÓN POST-LOGIN ---
+elif st.session_state.modulo_activo == "PanelMaestro":
+    renderizar_panel_maestro()
+
 elif st.session_state.autenticado:
     u_id = st.session_state.user_id
     db_u = cargar_json(ARCHIVO_USUARIOS)
-    user_info = db_u.get(u_id, {})
-    
-    f_venc = datetime.strptime(user_info.get('fecha_vencimiento', '2000-01-01'), '%Y-%m-%d').date()
-    hoy = datetime.now().date()
-    dias_restantes = (f_venc - hoy).days
-    vencida = hoy > f_venc
-    inactiva = user_info.get('estado_cuenta') != "activa"
+    user = db_u.get(u_id, {})
 
-    st.sidebar.title(f"👤 {user_info.get('username')}")
+    # Cálculos de suscripción
+    f_v = datetime.strptime(user.get('fecha_vencimiento', '2000-01-01'), '%Y-%m-%d').date()
+    hoy = datetime.now().date()
+    dias = (f_v - hoy).days
+    
+    # Barra lateral
+    st.sidebar.title(f"👤 {user.get('username')}")
     st.sidebar.markdown(f"""
-    <div class="subs-info">
-        <p style="margin:0; font-size:0.8em; color:#888;">SUSCRIPCIÓN ÚNICA</p>
-        <p style="margin:0; font-weight:bold; color:#00e6e6;">{user_info.get('estado_cuenta', 'S/N').upper()}</p>
-        <p style="margin:0; font-size:0.8em; color:#888; margin-top:5px;">VENCE EL: {f_venc.strftime('%d/%m/%Y')}</p>
-        <p style="margin:0; font-weight:bold; color:{'#ff4b4b' if dias_restantes <= 3 else '#00e6e6'};">
-            Faltan {max(0, dias_restantes)} días
-        </p>
+    <div class='subs-info'>
+        <b>Estado:</b> {user.get('estado_cuenta', 'S/N').upper()}<br>
+        <b>Vence:</b> {f_v.strftime('%d/%m/%Y')}<br>
+        <b>Días:</b> <span style='color:{'#ff4b4b' if dias <= 3 else '#00e6e6'};'>{max(0, dias)}</span>
     </div>
     """, unsafe_allow_html=True)
-
-    if st.sidebar.button("Cerrar Sesión"): 
+    
+    if st.sidebar.button("Cerrar Sesión"):
         st.session_state.autenticado = False
         st.rerun()
 
-    if str(user_info.get('clave')) == "10538":
+    # Si el usuario es el maestro (10538), mostrar botón administrativo
+    if str(user.get('clave')) == "10538":
         if st.sidebar.button("🛠️ PANEL MAESTRO"):
             st.session_state.modulo_activo = "PanelMaestro"
             st.rerun()
 
-    # --- BLOQUEO POR PAGO ---
-    if (vencida or inactiva) and st.session_state.modulo_activo == "Lobby":
-        st.error("🚨 SUSCRIPCIÓN VENCIDA O CUENTA INACTIVA")
-        st.info(f"📲 Contactar por Whatsapp al **{u_id}** (su número registrado) con el administrador Alfonso al **3122204688** para validación de pago y habilitación.")
+    # Validación de bloqueo
+    if (hoy > f_v or user.get('estado_cuenta') != "activa") and st.session_state.modulo_activo == "Lobby":
+        st.error("🚨 SERVICIO SUSPENDIDO")
+        st.info(f"Contactar por WhatsApp al **3122204688** para pago de suscripción.")
         st.stop()
 
     if st.session_state.modulo_activo == "Lobby":
         st.title("🌌 Hub Central - Universo X")
-        st.subheader("🚀 Módulos Habilitados")
-        
         c1, c2, c3, c4 = st.columns(4)
         with c1: 
             if st.button("🚚 LOGÍSTICA"): st.session_state.modulo_activo = "1_Logistica.py"; st.rerun()
@@ -174,11 +178,8 @@ elif st.session_state.autenticado:
             if st.button("🍔 COCINA"): st.session_state.modulo_activo = "3_restaurante.py"; st.rerun()
         with c4: 
             if st.button("🐍 CACD (IA)"): st.session_state.modulo_activo = "x_cacd.py"; st.rerun()
-
-    elif st.session_state.modulo_activo == "PanelMaestro":
-        renderizar_panel_maestro()
     else:
-        if st.sidebar.button("⬅️ REGRESAR AL HUB"): 
+        if st.sidebar.button("⬅️ VOLVER AL HUB"): 
             st.session_state.modulo_activo = "Lobby"
             st.rerun()
         cargar_modulo(st.session_state.modulo_activo)
