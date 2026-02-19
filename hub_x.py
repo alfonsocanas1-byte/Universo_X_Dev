@@ -44,10 +44,12 @@ st.markdown("""
     .stButton>button:hover { background-color: #00e6e6 !important; }
     .card { background: #111; border: 1px solid #333; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 10px; }
     .card-lock { opacity: 0.3; }
+    /* Estilo para la info de suscripción en el sidebar */
+    .subs-info { background-color: #111; padding: 10px; border-radius: 5px; border-left: 3px solid #00e6e6; margin-bottom: 20px; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- PANEL MAESTRO (ADMINISTRACIÓN) ---
+# --- PANEL MAESTRO ---
 def renderizar_panel_maestro():
     st.title("🛠️ PANEL MAESTRO - Gestión F5CO")
     if st.button("⬅️ VOLVER AL HUB"): 
@@ -63,32 +65,25 @@ def renderizar_panel_maestro():
     if id_usuario:
         u_dat = db_u[id_usuario]
         c_dat = db_c.get(id_usuario, {"servicios_f5co": {"microservicios_especializados": {"activo": False}}})
-
         st.subheader(f"Gestión de {u_dat.get('username')}")
         col1, col2 = st.columns(2)
-        
         with col1:
             estado_actual = u_dat.get('estado_cuenta', 'activa')
             nuevo_estado = st.selectbox("Estado de Cuenta", ["activa", "desactiva", "bloqueada"], 
                                         index=["activa", "desactiva", "bloqueada"].index(estado_actual))
-            
             f_venc_str = u_dat.get('fecha_vencimiento', str(datetime.now().date()))
             nueva_fecha = st.date_input("Fecha Vencimiento", value=datetime.strptime(f_venc_str, '%Y-%m-%d'))
-        
         with col2:
             st.write("--- Servicios F5CO ---")
             ms_esp = st.toggle("Microservicios Especializados (CACD)", 
                                value=c_dat.get('servicios_f5co', {}).get('microservicios_especializados', {}).get('activo', False))
-
         if st.button("💾 GUARDAR CAMBIOS MAESTROS"):
             db_u[id_usuario]['estado_cuenta'] = nuevo_estado
             db_u[id_usuario]['fecha_vencimiento'] = str(nueva_fecha)
             guardar_json(db_u, ARCHIVO_USUARIOS)
-            
             if id_usuario not in db_c: db_c[id_usuario] = {"servicios_f5co": {"microservicios_especializados": {"activo": False}}}
             db_c[id_usuario]['servicios_f5co']['microservicios_especializados']['activo'] = ms_esp
             guardar_json(db_c, ARCHIVO_CUENTAS)
-                
             st.success("Cambios aplicados.")
             st.rerun()
 
@@ -103,19 +98,12 @@ if not st.session_state.autenticado and st.session_state.modulo_activo != "Panel
             if u_id in db_u and str(db_u[u_id]["clave"]) == str(u_pw):
                 if 'fecha_vencimiento' not in db_u[u_id]:
                     hoy = datetime.now().date()
-                    db_u[u_id]['estado_cuenta'] = "activa"
-                    db_u[u_id]['fecha_creacion'] = str(hoy)
-                    db_u[u_id]['fecha_vencimiento'] = str(hoy + timedelta(days=15))
+                    db_u[u_id].update({"estado_cuenta": "activa", "fecha_creacion": str(hoy), "fecha_vencimiento": str(hoy + timedelta(days=15))})
                     guardar_json(db_u, ARCHIVO_USUARIOS)
-                
-                st.session_state.autenticado = True
-                st.session_state.user_id = u_id
+                st.session_state.update({"autenticado": True, "user_id": u_id})
                 st.rerun()
             else: st.error("Datos incorrectos.")
-    
-    # Acceso Maestro desde fuera
-    llave_m = st.text_input("Llave Administrativa", type="password")
-    if llave_m == "10538":
+    if st.text_input("Llave Administrativa", type="password") == "10538":
         if st.button("ACCESO MAESTRO"): 
             st.session_state.modulo_activo = "PanelMaestro"
             st.rerun()
@@ -129,23 +117,40 @@ elif st.session_state.autenticado:
     db_u = cargar_json(ARCHIVO_USUARIOS)
     user_info = db_u.get(u_id, {})
     
-    # Validación de tiempo y estado
+    # --- CÁLCULO DE SUSCRIPCIÓN ---
     f_venc = datetime.strptime(user_info.get('fecha_vencimiento', '2000-01-01'), '%Y-%m-%d').date()
-    vencida = datetime.now().date() > f_venc
+    hoy = datetime.now().date()
+    dias_restantes = (f_venc - hoy).days
+    vencida = hoy > f_venc
     inactiva = user_info.get('estado_cuenta') != "activa"
 
+    # --- SIDEBAR CON INFO DE SUSCRIPCIÓN ---
     st.sidebar.title(f"👤 {user_info.get('username')}")
+    
+    # Caja de información de suscripción
+    st.sidebar.markdown(f"""
+    <div class="subs-info">
+        <p style="margin:0; font-size:0.8em; color:#888;">SUSCRIPCIÓN</p>
+        <p style="margin:0; font-weight:bold; color:#00e6e6;">{user_info.get('estado_cuenta', 'S/N').upper()}</p>
+        <p style="margin:0; font-size:0.8em; color:#888; margin-top:5px;">VENCE EL:</p>
+        <p style="margin:0; font-weight:bold;">{f_venc.strftime('%d/%m/%Y')}</p>
+        <p style="margin:0; font-size:0.8em; color:#888; margin-top:5px;">DÍAS RESTANTES:</p>
+        <p style="margin:0; font-weight:bold; color:{'#ff4b4b' if dias_restantes <= 3 else '#00e6e6'};">
+            {max(0, dias_restantes)} días
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
     if st.sidebar.button("Cerrar Sesión"): 
         st.session_state.autenticado = False
         st.rerun()
 
-    # Botón Maestro en sidebar
     if str(user_info.get('clave')) == "10538":
         if st.sidebar.button("🛠️ PANEL MAESTRO"):
             st.session_state.modulo_activo = "PanelMaestro"
             st.rerun()
 
-    # Bloqueo por pago
+    # --- BLOQUEO POR PAGO ---
     if (vencida or inactiva) and st.session_state.modulo_activo == "Lobby":
         st.error("🚨 CUENTA REQUIERE VALIDACIÓN")
         st.info("📲 Contactar a **3122204688** para pago y habilitación.")
