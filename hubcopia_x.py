@@ -3,13 +3,12 @@ import json
 import os
 import importlib.util
 import pandas as pd
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
-# --- CONFIGURACIÓN DEL UNIVERSO ---
-st.set_page_config(page_title="Universo X - Hub Central", layout="wide")
+# --- CONFIGURACIÓN DEL SISTEMA ---
+st.set_page_config(page_title="Universo X - Sistema Central", layout="wide")
 
 ARCHIVO_USUARIOS = "usuarios_x.json"
-ARCHIVO_CUENTAS = "f5co_cuentas.json"
 
 # --- FUNCIONES DE PERSISTENCIA ---
 def cargar_json(ruta):
@@ -34,133 +33,147 @@ def cargar_modulo(nombre_archivo):
 # --- ESTADO DE SESIÓN ---
 if 'autenticado' not in st.session_state: st.session_state.autenticado = False
 if 'modulo_activo' not in st.session_state: st.session_state.modulo_activo = "Lobby"
-if 'precios' not in st.session_state: st.session_state.precios = {"Microservicio": 3000}
+if 'user_id' not in st.session_state: st.session_state.user_id = None
 
-# --- ESTÉTICA DARK TOTAL ---
+# --- ESTÉTICA DARK PREMIUM Y LETRAS BLANCAS SIDEBAR ---
 st.markdown("""
     <style>
-    .stApp { background-color: #000; color: white; }
-    .card { background: #111; border: 1px solid #333; padding: 20px; border-radius: 10px; text-align: center; }
-    h1, h2, h3 { color: #00e6e6 !important; }
+    .stApp { background-color: #000; color: #FFFFFF; }
+    /* Forzar letras blancas en el Sidebar */
+    [data-testid="stSidebar"] p, [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] span {
+        color: #FFFFFF !important;
+    }
+    h1, h2, h3, label { color: #00e6e6 !important; }
+    .stButton>button { background-color: #111 !important; color: #fff !important; border: 1px solid #333 !important; height: 55px; width: 100%; }
+    .stButton>button:hover { border-color: #00e6e6 !important; color: #00e6e6 !important; }
+    .card-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; color: #00e6e6; }
     </style>
-    """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
-# --- ACCESO INICIAL ---
-if not st.session_state.autenticado and st.session_state.modulo_activo not in ["F5CO", "X_Usuarios"]:
-    st.title("🚀 Portal de Acceso - Universo X")
+# --- PANEL MAESTRO ---
+def renderizar_panel_maestro():
+    st.title("🛠️ PANEL MAESTRO")
+    if st.button("⬅️ VOLVER AL HUB"): 
+        st.session_state.modulo_activo = "Lobby"
+        st.rerun()
     
-    col_acc1, col_acc2 = st.columns(2)
-    with col_acc1:
-        with st.expander("🔑 GESTIÓN DE IDENTIDAD (X Usuarios)"):
-            llave_u = st.text_input("Llave Administrativa", type="password", key="k_u")
-            if st.button("ENTRAR A USUARIOS"):
-                if llave_u == "10538":
-                    st.session_state.modulo_activo = "X_Usuarios"
-                    st.rerun()
-    
-    with col_acc2:
-        with st.expander("🏦 BANCO CENTRAL (F5CO)"):
-            llave_f = st.text_input("Llave de Tesorería", type="password", key="k_f")
-            if st.button("ENTRAR A FINANZAS"):
-                if llave_f == "10538":
-                    st.session_state.modulo_activo = "F5CO"
-                    st.rerun()
+    tab_gestion, tab_tabla = st.tabs(["👤 EDICIÓN DE USUARIOS", "📊 BASE DE DATOS"])
 
-    st.divider()
-    st.subheader("Ingreso de Suscriptores")
-    c_id = st.text_input("Número de Celular (ID)")
-    c_pw = st.text_input("Código Secreto", type="password")
-    if st.button("SINCRONIZAR"):
+    with tab_gestion:
         db_u = cargar_json(ARCHIVO_USUARIOS)
-        if c_id in db_u and db_u[c_id]["clave"] == c_pw:
-            st.session_state.autenticado = True
-            st.session_state.user_id = c_id
-            st.rerun()
-        else: st.error("Acceso denegado.")
-
-# --- MÓDULO: X USUARIOS ---
-elif st.session_state.modulo_activo == "X_Usuarios":
-    st.title("👤 Gestión: X Usuarios")
-    if st.button("⬅️ VOLVER AL PORTAL"): st.session_state.modulo_activo = "Lobby"; st.session_state.autenticado = False; st.rerun()
-    db_u = cargar_json(ARCHIVO_USUARIOS)
-    t_del, t_edit = st.tabs(["🗑️ ELIMINAR USUARIOS", "✏️ EDITAR PERFIL"])
-    
-    with t_del:
-        if st.checkbox("Desplegar usuarios para eliminación"):
-            for cel, info in db_u.items():
-                c1, c2 = st.columns([0.8, 0.2])
-                c1.write(f"**{info.get('nombre_completo')}** ({cel})")
-                if c2.button("BORRAR", key=f"del_{cel}"):
-                    del db_u[cel]
-                    guardar_json(db_u, ARCHIVO_USUARIOS)
-                    st.success("Identidad eliminada."); st.rerun()
-
-    with t_edit:
-        target = st.text_input("Digite celular para editar")
-        if target in db_u:
-            with st.form("edit_u"):
-                u_dat = db_u[target]
-                n_nom = st.text_input("Nombre", value=u_dat.get('nombre_completo'))
-                n_usr = st.text_input("Username", value=u_dat.get('username'))
-                if st.form_submit_button("ACTUALIZAR"):
-                    db_u[target].update({"nombre_completo": n_nom, "username": n_usr})
-                    guardar_json(db_u, ARCHIVO_USUARIOS); st.success("Guardado.")
-
-# --- MÓDULO: F5CO ---
-elif st.session_state.modulo_activo == "F5CO":
-    st.title("🏦 Tesorería F5CO")
-    if st.button("⬅️ VOLVER AL PORTAL"): st.session_state.modulo_activo = "Lobby"; st.session_state.autenticado = False; st.rerun()
-    st.info("Sistema de saldos vinculado a f5co_cuentas.json")
-
-# --- LOBBY CON MICROSERVICIOS SELECCIONADOS ---
-else:
-    db_u = cargar_json(ARCHIVO_USUARIOS)
-    db_c = cargar_json(ARCHIVO_CUENTAS)
-    u = db_u.get(st.session_state.user_id)
-    # Si no existe la cuenta, simulamos saldo 0 para no romper el Lobby
-    c = db_c.get(st.session_state.user_id, {"saldo": 0.0, "suscripciones": {}})
-
-    st.sidebar.title(f"👤 {u.get('username', 'Usuario')}")
-    st.sidebar.metric("Saldo Disponible", f"${c.get('saldo', 0.0):,}")
-    if st.sidebar.button("Cerrar Sesión"): st.session_state.autenticado = False; st.rerun()
-
-    st.title("🌌 Lobby Universo X")
-    st.write("Servicios Profesionales Activos")
-    
-    col1, col2, col3 = st.columns(3)
-    servs = [
-        ("🚚 Logística", "1_Logistica.py", col1),
-        ("🚜 Máquinas", "2_Maquinas.py", col2),
-        ("🍔 Restaurante", "3_restaurante.py", col3)
-    ]
-
-    for nom, file, columna in servs:
-        with columna:
-            st.markdown(f'<div class="card"><h3>{nom}</h3></div>', unsafe_allow_html=True)
-            costo = st.session_state.precios["Microservicio"]
+        id_usuario = st.selectbox("Seleccionar Celular (ID) para editar", options=list(db_u.keys()))
+        
+        if id_usuario:
+            u = db_u[id_usuario]
+            col1, col2 = st.columns(2)
+            with col1:
+                nuevo_nombre = st.text_input("Nombre Completo", value=u.get('nombre_completo', ''))
+                nuevo_user = st.text_input("Username", value=u.get('username', ''))
+                nuevo_pais = st.text_input("País", value=u.get('pais', 'Colombia'))
+                nueva_clave = st.text_input("Clave de Acceso", value=u.get('clave', ''))
+            with col2:
+                nueva_nac = st.text_input("Fecha Nacimiento", value=u.get('nacimiento', '1992-01-01'))
+                nuevo_indicio = st.text_input("Indicio de Clave", value=u.get('indicio', ''))
+                nuevo_estado = st.selectbox("Estado", ["activa", "desactiva"], index=0 if u.get('estado_cuenta')=="activa" else 1)
+                fecha_v = u.get('fecha_vencimiento', str(datetime.now().date()))
+                nueva_fecha = st.date_input("Vencimiento", value=datetime.strptime(fecha_v, '%Y-%m-%d'))
             
-            # Lógica de Acceso/Suscripción
-            acceso = False
-            if nom in c.get("suscripciones", {}):
-                f_pago = datetime.strptime(c["suscripciones"][nom], "%Y-%m-%d")
-                if datetime.now() < f_pago + timedelta(days=90): acceso = True
+            if st.button("💾 GUARDAR CAMBIOS"):
+                db_actualizada = cargar_json(ARCHIVO_USUARIOS)
+                db_actualizada[id_usuario].update({
+                    "nombre_completo": nuevo_nombre, "username": nuevo_user, "pais": nuevo_pais,
+                    "clave": nueva_clave, "nacimiento": nueva_nac, "indicio": nuevo_indicio,
+                    "estado_cuenta": nuevo_estado, "fecha_vencimiento": str(nueva_fecha)
+                })
+                guardar_json(db_actualizada, ARCHIVO_USUARIOS)
+                st.success("✅ Datos actualizados.")
+                st.rerun()
 
-            if acceso:
-                if st.button(f"ENTRAR A {nom.upper()}", key=f"go_{nom}"):
-                    st.session_state.modulo_activo = file; st.rerun()
-            else:
-                if st.button(f"PAGAR 90 DÍAS (${costo:,})", key=f"pay_{nom}"):
-                    if c["saldo"] >= costo:
-                        # Descontar del archivo de cuentas
-                        db_c.setdefault(st.session_state.user_id, {"saldo": 0.0, "suscripciones": {}, "movimientos": []})
-                        db_c[st.session_state.user_id]["saldo"] -= costo
-                        db_c[st.session_state.user_id]["suscripciones"][nom] = str(date.today())
-                        guardar_json(db_c, ARCHIVO_CUENTAS)
-                        st.success("Suscripción exitosa."); st.rerun()
-                    else: st.error("Saldo insuficiente en F5CO.")
+    with tab_tabla:
+        db_u = cargar_json(ARCHIVO_USUARIOS)
+        if db_u:
+            df = pd.DataFrame([{"Celular": k, **v} for k, v in db_u.items()])
+            st.dataframe(df, use_container_width=True, hide_index=True)
 
-    # Pie de página o retorno de módulos
-    if st.session_state.modulo_activo != "Lobby":
-        if st.sidebar.button("⬅️ REGRESAR AL HUB"):
+# --- INTERFAZ PRINCIPAL ---
+if not st.session_state.autenticado and st.session_state.modulo_activo != "PanelMaestro":
+    st.title("🚀 Acceso Universo X")
+    with st.form("login"):
+        u_id = st.text_input("Número de Celular")
+        u_pw = st.text_input("Clave", type="password")
+        if st.form_submit_button("INGRESAR"):
+            db_u = cargar_json(ARCHIVO_USUARIOS)
+            if u_id in db_u and str(db_u[u_id]["clave"]) == str(u_pw):
+                st.session_state.autenticado = True
+                st.session_state.user_id = u_id
+                st.rerun()
+            else: st.error("Acceso incorrecto.")
+
+    if st.text_input("🔑 Maestro", type="password") == "10538":
+        if st.button("ABRIR PANEL"):
+            st.session_state.modulo_activo = "PanelMaestro"; st.rerun()
+
+elif st.session_state.modulo_activo == "PanelMaestro":
+    renderizar_panel_maestro()
+
+elif st.session_state.autenticado:
+    u_id = st.session_state.user_id
+    user = cargar_json(ARCHIVO_USUARIOS).get(u_id, {})
+    
+    # --- SIDEBAR CON LETRAS BLANCAS ---
+    st.sidebar.markdown(f"""
+    <div style="background-color: #111; padding: 15px; border-radius: 10px; border-left: 5px solid #00e6e6; margin-bottom: 20px;">
+        <h2 style="margin: 0; font-size: 1.2em;">👤 {user.get('nombre_completo', 'Usuario')}</h2>
+        <p style="margin: 8px 0; font-size: 0.9em;"><b>📞 Celular:</b> {u_id}</p>
+        <p style="margin: 5px 0; font-size: 0.9em;"><b>⏳ Vence:</b> {user.get('fecha_vencimiento')}</p>
+        <p style="margin: 0; font-size: 0.8em; opacity: 0.7;">@{user.get('username')}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.sidebar.button("Cerrar Sesión"):
+        st.session_state.autenticado = False; st.rerun()
+
+    if user.get('clave') == "10538":
+        if st.sidebar.button("🛠️ PANEL MAESTRO"):
+            st.session_state.modulo_activo = "PanelMaestro"; st.rerun()
+
+    if st.session_state.modulo_activo == "Lobby":
+        st.title("🌌 Hub Central de Microservicios")
+        
+        # CATEGORÍA 1: OPERACIONES
+        st.markdown("<div class='card-title'>⚙️ OPERACIONES</div>", unsafe_allow_html=True)
+        c1, c2, c3 = st.columns(3)
+        with c1: 
+            if st.button("🚚 LOGÍSTICA"): st.session_state.modulo_activo = "1_Logistica.py"; st.rerun()
+        with c2: 
+            if st.button("🚜 MÁQUINAS"): st.session_state.modulo_activo = "2_Maquinas.py"; st.rerun()
+        with c3: 
+            if st.button("🍔 RESTAURANTE"): st.session_state.modulo_activo = "3_restaurante.py"; st.rerun()
+
+        # CATEGORÍA 2: SALUD Y SUMINISTROS
+        st.markdown("<div class='card-title'>📦 SALUD Y SUMINISTROS</div>", unsafe_allow_html=True)
+        c4, c5, c6 = st.columns(3)
+        with c4: 
+            if st.button("🛒 ALACENA / MERCADO"): st.info("Próximamente...")
+        with c5: 
+            if st.button("🌱 AGRO-PRO"): st.info("Próximamente...")
+        with c6: 
+            if st.button("🦷 ODONTOLOGÍA"): st.info("Próximamente...")
+
+        # CATEGORÍA 3: ESPECIALIZADO Y CONTENIDO
+        st.divider()
+        col_esp, col_con = st.columns(2)
+        with col_esp:
+            st.markdown("<div class='card-title'>🧬 ESPECIALIZADO</div>", unsafe_allow_html=True)
+            if st.button("🐍 CACD (IA OFÍDICA)"): st.session_state.modulo_activo = "x_cacd.py"; st.rerun()
+        with col_con:
+            st.markdown("<div class='card-title'>💎 CONTENIDO</div>", unsafe_allow_html=True)
+            c_ga, c_dt = st.columns(2)
+            with c_ga: 
+                if st.button("🎨 GALERÍA ARTE"): st.info("Cargando Galería...")
+            with c_dt: 
+                if st.button("📑 DESCARGABLES"): st.info("Abriendo Biblioteca...")
+    else:
+        if st.sidebar.button("⬅️ VOLVER AL HUB"): 
             st.session_state.modulo_activo = "Lobby"; st.rerun()
         cargar_modulo(st.session_state.modulo_activo)

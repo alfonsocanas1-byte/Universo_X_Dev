@@ -95,20 +95,56 @@ def renderizar_panel_maestro():
             df = pd.DataFrame([{"Celular": k, **v} for k, v in db_u.items()])
             st.dataframe(df, use_container_width=True, hide_index=True)
 
-# --- INTERFAZ PRINCIPAL ---
+# --- INTERFAZ PRINCIPAL (LOGIN Y REGISTRO) ---
 if not st.session_state.autenticado and st.session_state.modulo_activo != "PanelMaestro":
-    st.title("🚀 Acceso Universo X")
-    with st.form("login"):
-        u_id = st.text_input("Número de Celular")
-        u_pw = st.text_input("Clave", type="password")
-        if st.form_submit_button("INGRESAR"):
-            db_u = cargar_json(ARCHIVO_USUARIOS)
-            if u_id in db_u and str(db_u[u_id]["clave"]) == str(u_pw):
-                st.session_state.autenticado = True
-                st.session_state.user_id = u_id
-                st.rerun()
-            else: st.error("Acceso incorrecto.")
+    st.title("🚀 Bienvenido al Universo X")
+    
+    tab_login, tab_registro = st.tabs(["🔐 INGRESAR", "📝 REGISTRARME"])
 
+    with tab_login:
+        with st.form("login"):
+            u_id = st.text_input("Número de Celular")
+            u_pw = st.text_input("Clave", type="password")
+            if st.form_submit_button("INGRESAR AL HUB"):
+                db_u = cargar_json(ARCHIVO_USUARIOS)
+                if u_id in db_u and str(db_u[u_id]["clave"]) == str(u_pw):
+                    st.session_state.autenticado = True
+                    st.session_state.user_id = u_id
+                    st.rerun()
+                else: st.error("Acceso incorrecto. Verifique sus datos.")
+
+    with tab_registro:
+        with st.form("registro"):
+            r_id = st.text_input("Número de Celular (Será su ID)")
+            r_nombre = st.text_input("Nombre Completo")
+            r_user = st.text_input("Nombre de Usuario")
+            r_pw = st.text_input("Definir Clave", type="password")
+            r_indicio = st.text_input("Indicio de clave (opcional)")
+            
+            if st.form_submit_button("CREAR MI CUENTA"):
+                db_u = cargar_json(ARCHIVO_USUARIOS)
+                r_id = r_id.strip()
+                if r_id in db_u:
+                    st.error("Este número ya se encuentra registrado.")
+                elif r_id and r_pw and r_nombre:
+                    hoy = datetime.now().date()
+                    db_u[r_id] = {
+                        "nombre_completo": r_nombre,
+                        "username": r_user,
+                        "pais": "Colombia",
+                        "nacimiento": "1992-01-01",
+                        "clave": r_pw,
+                        "indicio": r_indicio,
+                        "estado_cuenta": "activa",
+                        "fecha_creacion": str(hoy),
+                        "fecha_vencimiento": str(hoy + timedelta(days=15))
+                    }
+                    guardar_json(db_u, ARCHIVO_USUARIOS)
+                    st.success("✅ ¡Registro exitoso! Ya puede ingresar con sus datos en la pestaña anterior.")
+                else:
+                    st.warning("Por favor complete los campos obligatorios.")
+
+    st.divider()
     if st.text_input("🔑 Maestro", type="password") == "10538":
         if st.button("ABRIR PANEL"):
             st.session_state.modulo_activo = "PanelMaestro"; st.rerun()
