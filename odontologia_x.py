@@ -3,9 +3,7 @@ import json
 import os
 from datetime import datetime
 
-# --- CONFIGURACIÓN DE PÁGINA ---
-# No usamos set_page_config aquí porque el Hub ya lo hace.
-
+# --- CONFIGURACIÓN DE DATOS ---
 ARCHIVO_USUARIOS = "usuarios_x.json"
 
 def cargar_json(ruta):
@@ -15,86 +13,91 @@ def cargar_json(ruta):
             except: return {}
     return {}
 
-# --- ESTÉTICA ESPECÍFICA ODONTOLOGÍA ---
+# --- ESTÉTICA ODONTOLOGÍA X ---
 st.markdown("""
     <style>
     .odont-card { background: #111; border-top: 4px solid #00e6e6; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
-    .stButton>button { border-color: #00e6e6 !important; }
+    .stButton>button { border-color: #00e6e6 !important; color: #fff !important; }
+    .sidebar .sidebar-content { background-image: linear-gradient(#2e7bcf,#2e7bcf); color: white; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- VALIDACIÓN DE ACCESO ESPECIALIZADO ---
-if 'acceso_odont_concedido' not in st.session_state:
-    st.session_state.acceso_odont_concedido = False
+# --- ESTADO DE ACCESO ESPECIAL ---
+if 'acceso_maestro_odont' not in st.session_state:
+    st.session_state.acceso_maestro_odont = False
 
 def odontologia_main():
-    st.title("🦷 Microservicio de Odontología")
-    
-    # Datos del usuario actual del Hub
+    # Datos del usuario que viene del Hub
     u_id = st.session_state.get('user_id', 'S/N')
     db_u = cargar_json(ARCHIVO_USUARIOS)
     user_info = db_u.get(u_id, {})
+    nombre_usuario = user_info.get('nombre_completo', 'Paciente')
 
-    if not st.session_state.acceso_odont_concedido:
-        st.warning("⚠️ Este módulo requiere validación profesional.")
-        with st.form("llave_odont"):
-            llave = st.text_input("Ingrese Llave de Acceso Odontológico", type="password")
-            if st.form_submit_button("VALIDAR"):
-                if llave == "sol27":
-                    st.session_state.acceso_odont_concedido = True
-                    st.success("Acceso Concedido")
-                    st.rerun()
-                else:
-                    st.error("Llave incorrecta.")
-        return
+    st.title("🦷 Ecosistema Odontológico X")
+    st.write(f"Bienvenido/a, **{nombre_usuario}**")
 
-    # --- MENU DE ODONTOLOGÍA ---
-    menu_odont = st.sidebar.radio("Navegación Odontológica", 
-                                  ["Mis Procedimientos", "Software de Cepillado", "Diseño de Sonrisa IA"])
+    # --- NAVEGACIÓN LATERAL ---
+    opciones = ["Mis Procedimientos", "Software de Cepillado", "Diseño de Sonrisa IA", "🔐 ACCESO PROFESIONAL"]
+    menu = st.sidebar.radio("Módulos Disponibles", opciones)
 
-    # 1. MIS PROCEDIMIENTOS (PERSONALIZADO)
-    if menu_odont == "Mis Procedimientos":
-        st.header(f"📂 Historial de: {user_info.get('nombre_completo', 'Paciente')}")
-        st.write(f"ID Paciente: {u_id}")
+    # 1. MIS PROCEDIMIENTOS
+    if menu == "Mis Procedimientos":
+        st.header("📂 Mis Procedimientos y Seguimiento")
+        st.info(f"Visualizando registros de: {nombre_usuario}")
         
-        col_img1, col_img2 = st.columns(2)
-        with col_img1:
-            st.markdown("<div class='odont-card'><h4>Radiografías</h4></div>", unsafe_allow_html=True)
-            uploaded_file = st.file_uploader("Cargar nueva imagen de seguimiento", type=['png', 'jpg', 'jpeg'], key="rad")
-            if uploaded_file:
-                st.image(uploaded_file, caption="Imagen cargada para análisis")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("<div class='odont-card'><h4>Subir Seguimiento</h4></div>", unsafe_allow_html=True)
+            foto = st.file_uploader("Cargar foto de mi tratamiento", type=['jpg', 'png'], key="user_proc")
+            if foto:
+                st.image(foto, caption="Imagen registrada en su historial")
         
-        with col_img2:
-            st.markdown("<div class='odont-card'><h4>Evolución Clínica</h4></div>", unsafe_allow_html=True)
-            st.info("No se registran procedimientos invasivos en las últimas 24 horas.")
+        with col2:
+            st.markdown("<div class='odont-card'><h4>Estatus Actual</h4></div>", unsafe_allow_html=True)
+            st.success("✅ Próxima cita sugerida: Revisar con administración.")
 
-    # 2. MINI SOFTWARE DE CEPILLADO
-    elif menu_odont == "Software de Cepillado":
-        st.header("🪥 Cronómetro de Limpieza Profunda")
-        st.write("Inicie el temporizador para asegurar un cepillado efectivo por zonas (2 minutos).")
-        
-        if st.button("INICIAR CICLO"):
-            st.write("⌛ Fase 1: Cara externa de dientes superiores...")
-            # Aquí se puede añadir una barra de progreso real
-            st.progress(25)
-            st.write("⌛ Fase 2: Cara externa de dientes inferiores...")
-            st.progress(50)
+    # 2. SOFTWARE DE CEPILLADO
+    elif menu == "Software de Cepillado":
+        st.header("🪥 Asistente de Higiene Bucal")
+        st.write("Sigue el ritmo para un cepillado perfecto.")
+        if st.button("INICIAR TEMPORIZADOR"):
+            st.info("⌛ Iniciando ciclo de 2 minutos...")
+            st.progress(0.3)
+            st.write("Fase 1: Zona superior derecha...")
 
-    # 3. DISEÑOS DE SONRISA CON IA
-    elif menu_odont == "Diseño de Sonrisa IA":
-        st.header("🧬 Análisis Estético IA")
-        st.markdown("""
-        Utilice nuestra red neuronal para simular el resultado de carillas, 
-        blanqueamiento o diseño gingival.
-        """)
-        
-        img_paciente = st.file_uploader("Suba una foto frontal sonriendo", type=['png', 'jpg'], key="ia_smile")
-        
-        if img_paciente:
-            st.image(img_paciente, caption="Analizando proporciones áureas...")
-            with st.spinner("Procesando simulaciones..."):
-                st.success("Análisis completo: Se recomienda ajuste de 1.5mm en bordes incisales.")
-                st.button("Generar Visualización 3D")
+    # 3. DISEÑO DE SONRISA IA
+    elif menu == "Diseño de Sonrisa IA":
+        st.header("🧬 Simulador IA")
+        st.write("Sube una foto de tu sonrisa para ver el potencial del diseño X.")
+        img_ia = st.file_uploader("Foto frontal", type=['jpg', 'png'], key="ia_smile")
+        if img_ia:
+            st.image(img_ia)
+            with st.spinner("IA analizando proporciones..."):
+                st.success("Sugerencia IA: Blanqueamiento Grado 2 y ajuste estético leve.")
 
-# Ejecución del módulo
+    # 4. ACCESO PROFESIONAL (LLAVE SOL27)
+    elif menu == "🔐 ACCESO PROFESIONAL":
+        if not st.session_state.acceso_maestro_odont:
+            st.header("Validación de Credenciales")
+            with st.form("llave_odont"):
+                llave = st.text_input("Ingrese llave profesional", type="password")
+                if st.form_submit_button("DESBLOQUEAR TODO"):
+                    if llave == "sol27":
+                        st.session_state.acceso_maestro_odont = True
+                        st.success("Acceso Profesional Concedido. Ahora puede ver el Panel Total.")
+                        st.rerun()
+                    else:
+                        st.error("Llave incorrecta.")
+        else:
+            st.header("🌟 PANEL DE CONTROL TOTAL (Sol / Maestro)")
+            st.markdown("<div class='odont-card'><h4>Gestión de Pacientes</h4></div>", unsafe_allow_html=True)
+            # Aquí Sol vería la lista de todos los pacientes del JSON
+            st.write("Lista de pacientes registrados:")
+            st.dataframe(list(db_u.keys()))
+            
+            if st.button("CERRAR SESIÓN PROFESIONAL"):
+                st.session_state.acceso_maestro_odont = False
+                st.rerun()
+
+# Ejecutar
 odontologia_main()
