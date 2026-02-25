@@ -14,20 +14,30 @@ def cargar_json(ruta):
             except: return {}
     return {}
 
-# --- ESTÉTICA DE ALTO CONTRASTE (Letras Negras Reales) ---
+# --- ESTÉTICA MEJORADA (Sidebar con Datos Resaltados) ---
 st.markdown("""
     <style>
     /* Fondo principal negro */
     .stApp { background-color: #000; color: #FFFFFF; }
     
-    /* FORZAR LETRAS NEGRAS EN SIDEBAR */
+    /* FORZAR LETRAS NEGRAS EN MENÚ SIDEBAR */
     [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p, 
     [data-testid="stSidebar"] span, 
-    [data-testid="stSidebar"] label,
-    [data-testid="stSidebar"] div {
+    [data-testid="stSidebar"] label {
         color: #000000 !important;
         font-weight: 700 !important;
     }
+
+    /* RECUADRO DE DATOS DEL USUARIO (Sidebar) */
+    .user-info-sidebar {
+        background: #00e6e6;
+        padding: 15px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        border: 2px solid #000;
+    }
+    .user-info-sidebar b { color: #000 !important; }
+    .user-info-sidebar span { color: #000 !important; display: block; font-size: 0.9em; }
 
     /* Caja de Bienvenida Premium */
     .welcome-box {
@@ -40,7 +50,6 @@ st.markdown("""
         text-align: center;
     }
     .dr-name { color: #00e6e6; font-size: 32px; font-weight: 900; margin-bottom: 5px; }
-    .patient-welcome { color: #ffffff; font-size: 20px; margin-bottom: 20px; }
     .instruction { 
         background-color: #00e6e6; 
         color: #000 !important; 
@@ -49,9 +58,6 @@ st.markdown("""
         font-weight: bold;
         display: inline-block;
     }
-
-    /* Tarjetas de módulos */
-    .odont-card { background: #111; border-left: 5px solid #00e6e6; padding: 20px; border-radius: 10px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -62,15 +68,27 @@ def odontologia_main():
     u_id = st.session_state.get('user_id', 'S/N')
     db_u = cargar_json(ARCHIVO_USUARIOS)
     user_info = db_u.get(u_id, {})
-    nombre_paciente = user_info.get('nombre_completo', 'Paciente')
+    nombre_p = user_info.get('nombre_completo', 'Paciente')
+    fecha_v = user_info.get('fecha_vencimiento', 'N/A')
 
-    # --- DISEÑO DE BIENVENIDA ---
+    # --- DATOS EN SIDEBAR (OTRO COLOR) ---
+    st.sidebar.markdown(f"""
+    <div class="user-info-sidebar">
+        <b>👤 PACIENTE:</b><br>
+        <span>{nombre_p}</span>
+        <hr style="border: 0.5px solid #000; margin: 8px 0;">
+        <b>⏳ VENCE:</b><br>
+        <span>{fecha_v}</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # --- BIENVENIDA ---
     st.markdown(f"""
     <div class="welcome-box">
         <div class="dr-name">Dra. Sol Rojas</div>
         <div style="color: #ccc; letter-spacing: 2px; margin-bottom: 15px;">CONSULTORIO ODONTOLÓGICO</div>
-        <div class="patient-welcome">¡Hola, <b>{nombre_paciente}</b>! Es un placer recibirte.</div>
-        <div class="instruction">👈 Accede a los módulos en la barra de la izquierda</div>
+        <div style="color: #fff; font-size: 20px; margin-bottom: 20px;">¡Hola, <b>{nombre_p}</b>! Es un placer recibirte.</div>
+        <div class="instruction">👈 Selecciona un módulo en el menú</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -84,18 +102,11 @@ def odontologia_main():
 
     if menu == "Mis Procedimientos":
         st.header("📂 Tu Historial Clínico")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("<div class='odont-card'><h4>Evolución</h4><p>Sube tus fotos de control aquí.</p></div>", unsafe_allow_html=True)
-            st.file_uploader("Subir imagen", type=['jpg', 'png'], key="up")
-        with col2:
-            st.markdown("<div class='odont-card'><h4>Próximos Pasos</h4><p>Consulta tu estado actual.</p></div>", unsafe_allow_html=True)
-            st.success("Tratamiento en curso.")
+        st.file_uploader("Subir foto de control", type=['jpg', 'png'], key="up")
 
     elif menu == "Software de Cepillado":
         st.header("🪥 Guía de Higiene")
-        if st.button("INICIAR ASISTENTE"):
-            st.info("⌛ Iniciando cronómetro profesional...")
+        st.button("INICIAR ASISTENTE")
 
     elif menu == "Diseño de Sonrisa IA":
         st.header("🧬 Simulación Estética")
@@ -113,7 +124,6 @@ def odontologia_main():
                     else: st.error("Llave incorrecta.")
         else:
             st.header("🌟 PANEL PROFESIONAL")
-            st.write("Base de Datos de Pacientes:")
             st.dataframe(pd.DataFrame([{"ID": k, "Paciente": v.get('nombre_completo')} for k, v in db_u.items()]))
             if st.button("SALIR DEL PANEL"):
                 st.session_state.acceso_maestro_odont = False
